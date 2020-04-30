@@ -1,7 +1,33 @@
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+
+import numpy as np
 import os, sys
+import h5py
+import pathlib
+import matplotlib.pylab as plt
+import pickle
+import pandas as pd
+import time as time
+
+import multiprocessing
+from multiprocessing import cpu_count
+
+from tensorflow import keras
+from tensorflow.keras import layers, datasets, optimizers, Sequential, metrics, backend
+from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.utils import plot_model
+
+
+import logging
+logging.getLogger("tensorflow").setLevel(logging.DEBUG)
+
+
 import dataloader as dd
-from keras.optimizers import *
-from keras.callbacks import *
+from tensorflow.keras.optimizers import *
+from tensorflow.keras.callbacks import *
+
 
 itokens, otokens = dd.MakeS2SDict('data/en2de.s2s.txt', dict_file='data/en2de_word.txt')
 Xtrain, Ytrain = dd.MakeS2SData('data/en2de.s2s.txt', itokens, otokens, h5_file='data/en2de.h5')
@@ -34,7 +60,9 @@ s2s.compile(Adam(0.001, 0.9, 0.98, epsilon=1e-9))
 try: s2s.model.load_weights(mfile)
 except: print('\n\nnew model')
 
-if 'eval' in sys.argv:
+argv_type = 'test'
+#if 'eval' in sys.argv:
+if 'eval' in argv_type:
 	for x, y in s2s.beam_search('A black dog eats food .'.split(), delimiter=' '):
 		print(x, y)
 	print(s2s.decode_sequence_readout('A black dog eats food .'.split(), delimiter=' '))
@@ -44,7 +72,8 @@ if 'eval' in sys.argv:
 		print(s2s.decode_sequence_fast(quest.split(), delimiter=' '))
 		rets = s2s.beam_search(quest.split(), delimiter=' ')
 		for x, y in rets: print(x, y)
-elif 'test' in sys.argv:
+#elif 'test' in sys.argv:
+elif 'test' in argv_type:
 	import ljqpy
 	valids = ljqpy.LoadCSV('data/en2de.s2s.valid.txt')
 	en = [x[0].split() for x in valids[:100]]

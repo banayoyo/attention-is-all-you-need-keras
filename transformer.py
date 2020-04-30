@@ -1,10 +1,13 @@
 import random, os, sys
 import numpy as np
-from keras.models import *
-from keras.layers import *
-from keras.callbacks import *
-from keras.initializers import *
+from tensorflow.keras.models import *
+from tensorflow.keras.layers import *
+from tensorflow.keras.callbacks import *
+from tensorflow.keras.initializers import *
 import tensorflow as tf
+from tensorflow.keras import backend as K
+import matplotlib.pylab as plt
+from tensorflow.keras.utils import plot_model
 
 try:
 	from tqdm import tqdm
@@ -436,7 +439,18 @@ class Transformer:
 		final_output = self.target_layer(dec_output)
 
 		def get_loss(y_pred, y_true):
-			y_true = tf.cast(y_true, 'int32')
+			#y_true = tf.cast(y_true, 'int32')
+			print("cross_entropy labels.shape=",y_true.shape,"logits.shape=",y_pred.shape)
+			print("cross_entropy labels.dtype=", y_true.dtype, "logits.dtype=", y_pred.dtype)
+			aa = y_true.shape
+			bb = y_pred.shape
+			rr = min(len(aa),len(bb))
+			for ii in range(rr):
+				if aa[ii] is bb[ii]:
+					print("The same",aa, "=",bb)
+				else:
+					print("Not the same",aa, "?",bb)
+
 			loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y_true, logits=y_pred)
 			mask = tf.cast(tf.not_equal(y_true, 0), 'float32')
 			loss = tf.reduce_sum(loss * mask, -1) / tf.reduce_sum(mask, -1)
@@ -449,18 +463,26 @@ class Transformer:
 			corr = K.sum(corr * mask, -1) / K.sum(mask, -1)
 			return K.mean(corr)
 				
-		loss = get_loss(final_output, tgt_true)
-		self.ppl = K.exp(loss)
-		self.accu = get_accu(final_output, tgt_true)
-
 		self.model = Model([src_seq_input, tgt_seq_input], final_output)
-		self.model.add_loss([loss])
+		#loss = get_loss(final_output, tgt_true)
+		#self.model.add_loss([loss])
 		
-		self.model.compile(optimizer, None)
-		self.model.metrics_names.append('ppl')
-		self.model.metrics_tensors.append(self.ppl)
-		self.model.metrics_names.append('accu')
-		self.model.metrics_tensors.append(self.accu)
+		self.model.compile(optimizer=optimizer,loss='categorical_crossentropy',metrics=['accuracy'])
+		self.model.summary()
+		#self.ppl = K.exp(loss)
+		#self.accu = get_accu(final_output, tgt_true)
+		#self.model.metrics_names.append('ppl')
+		#self.model.metrics_tensors.append(self.ppl)
+		#self.model.metrics_names.append('accu')
+		#self.model.metrics_tensors.append(self.accu)
+
+		pics = 'model.png'
+		plot_model(self.model, to_file=pics, show_shapes=True)
+		plt.figure()
+		lena = plt.imread(pics)
+		plt.imshow(lena)
+		plt.show()
+
 
 	def make_src_seq_matrix(self, input_seqs):
 		if type(input_seqs[0]) == type(''): input_seqs = [input_seqs]
